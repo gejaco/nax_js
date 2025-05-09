@@ -189,7 +189,7 @@ function onClick(event) {
         document.getElementById('gameStatus').textContent = ``;
 
         // Update the status message instead of creating a new one
-      const status = document.getElementById('gameStatus');
+      const status = document.getElementById('status');
       if (status) {
         status.textContent = `Player ${currentPlayer} wins!`;
       }
@@ -202,11 +202,15 @@ function onClick(event) {
 
       // ✅ Only switch player if no win
       currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
-      //document.getElementById('gameStatus').textContent = `Player ${currentPlayer}'s turn`;
-      const status = document.getElementById('gameStatus');
-      if (status) {
-        status.textContent = `Player ${currentPlayer}'s turn`;
-}
+      console.log('Current player:', currentPlayer);
+
+      // Debugging: Ensure status element exists before updating
+      const status = document.getElementById('status');
+      if (!status) {
+        console.error('status element not found in the DOM.');
+        return;
+      }
+      status.textContent = `Player ${currentPlayer}'s turn`;
     }
   }
 }
@@ -220,13 +224,14 @@ function addMark(row, col, player) {
     mesh = createOMark();
   }
   mesh.position.set((col - 1) * cellSize, 0.2, (row - 1) * cellSize);
-  scene.add(mesh);
+  mesh.userData = { isMark: true }; // Mark this mesh as a game mark
+  boardGroup.add(mesh);
 }
 
 function createXMark() {
   const group = new THREE.Group();
   const mat = new THREE.MeshStandardMaterial({ color: 0x33d1ff });
-  const bar1 = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.2, 0.3), mat);
+  const bar1 = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.4, 0.3), mat);
   const bar2 = bar1.clone();
 
   bar1.rotation.y = Math.PI / 4;
@@ -286,13 +291,21 @@ function equal(a, b, c) {
 }
 
 function restartGame() {
-  // Clear the entire scene
-  while (scene.children.length > 0) {
-    const child = scene.children[0];
-    if (child.geometry) child.geometry.dispose();
-    if (child.material) child.material.dispose();
-    scene.remove(child);
-  }
+  // Remove all marks (X and O) from the scene
+  boardGroup.children = boardGroup.children.filter((child) => {
+    if (child.userData && child.userData.isMark) {
+      if (child.geometry) child.geometry.dispose();
+      if (child.material) {
+        if (Array.isArray(child.material)) {
+          child.material.forEach((mat) => mat.dispose());
+        } else {
+          child.material.dispose();
+        }
+      }
+      return false; // Remove this child
+    }
+    return true; // Keep other children (e.g., the board)
+  });
 
   // Reset game state
   board = Array.from({ length: 3 }, () => Array(3).fill(null));
@@ -304,14 +317,17 @@ function restartGame() {
   if (winMessage) winMessage.remove();
 
   // Reset status text
-  const status = document.getElementById('gameStatus');
+  const status = document.getElementById('status');
   if (status) {
     status.textContent = "";
   }
 
-  init();
-  animate();
-
+  // Reset highlight and strikeLine
+  highlight.visible = false;
+  if (strikeLine) {
+    scene.remove(strikeLine);
+    strikeLine = null;
+  }
 }
 
 function resetGame() {
@@ -345,7 +361,7 @@ function resetGame() {
   if (winMessage) winMessage.remove();
 
   // Reset status text
-  const status = document.getElementById('gameStatus');
+  const status = document.getElementById('status');
   if (status) {
     status.textContent = `Player X's turn`;
   }
