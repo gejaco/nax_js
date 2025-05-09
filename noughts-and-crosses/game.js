@@ -38,7 +38,7 @@ function init() {
   // Create the highlight plane (invisible initially)
   const highlightMaterial = new THREE.MeshBasicMaterial({
     color: 0xffff00, // Yellow
-    opacity: 0.4,
+    opacity: 1,
     transparent: true
   });
   highlight = new THREE.Mesh(new THREE.PlaneGeometry(cellSize, cellSize), highlightMaterial);
@@ -59,6 +59,102 @@ function init() {
 }
 
 function buildBoard() {
+  boardGroup = new THREE.Group();
+  board = Array.from({ length: 3 }, () => Array(3).fill(null));
+
+  const lineColor = 0xffffff;
+  const boardBaseColor = 0xaaaaaa;
+
+  const lineMaterial = new THREE.MeshStandardMaterial({
+    color: lineColor,
+    metalness: 0.2,
+    roughness: 0.3
+  });
+
+  const boardMaterial = new THREE.MeshStandardMaterial({
+    color: boardBaseColor,
+    metalness: 0.1,
+    roughness: 0.6
+  });
+
+  const lineThickness = 0.05;
+  const lineDepth = 0.1;
+  const lineLength = cellSize * 3;
+
+  // Add base platform for the board
+  const base = new THREE.Mesh(
+    new THREE.BoxGeometry(lineLength + 0.1, lineDepth, lineLength + 0.1),
+    boardMaterial
+  );
+  base.position.y = -lineDepth / 2;
+  boardGroup.add(base);
+
+  // Add visual grid lines
+  for (let i = 1; i <= 2; i++) {
+    // Horizontal line
+    const hLine = new THREE.Mesh(
+      new THREE.BoxGeometry(lineLength, lineThickness, lineThickness),
+      lineMaterial
+    );
+    hLine.position.set(0, 0.01, (i - 1.5) * cellSize);
+    boardGroup.add(hLine);
+
+    // Vertical line
+    const vLine = new THREE.Mesh(
+      new THREE.BoxGeometry(lineThickness, lineThickness, lineLength),
+      lineMaterial
+    );
+    vLine.position.set((i - 1.5) * cellSize, 0.01, 0);
+    boardGroup.add(vLine);
+  }
+
+  // Add white border around the board
+  const borderMaterial = new THREE.MeshStandardMaterial({ color: 0xffffff });
+  const borderThickness = 0.05;
+  const totalSize = cellSize * 3 + borderThickness;
+
+  const topBorder = new THREE.Mesh(
+    new THREE.BoxGeometry(totalSize, lineThickness, lineThickness),
+    borderMaterial
+  );
+  topBorder.position.set(0, 0.015, 1.5 * cellSize + borderThickness / 2);
+  boardGroup.add(topBorder);
+
+  const bottomBorder = topBorder.clone();
+  bottomBorder.position.z = -topBorder.position.z;
+  boardGroup.add(bottomBorder);
+
+  const leftBorder = new THREE.Mesh(
+    new THREE.BoxGeometry(lineThickness, lineThickness, totalSize),
+    borderMaterial
+  );
+  leftBorder.position.set(-1.5 * cellSize - borderThickness / 2, 0.015, 0);
+  boardGroup.add(leftBorder);
+
+  const rightBorder = leftBorder.clone();
+  rightBorder.position.x = -leftBorder.position.x;
+  boardGroup.add(rightBorder);
+
+  // Add invisible click targets (1 per cell)
+  const invisibleMat = new THREE.MeshBasicMaterial({ transparent: true, opacity: 0 });
+  for (let row = 0; row < 3; row++) {
+    for (let col = 0; col < 3; col++) {
+      const cell = new THREE.Mesh(
+        new THREE.PlaneGeometry(cellSize, cellSize),
+        invisibleMat
+      );
+      cell.rotation.x = -Math.PI / 2;
+      cell.position.set((col - 1) * cellSize, 0.02, (row - 1) * cellSize);
+      cell.userData = { row, col };
+      boardGroup.add(cell);
+    }
+  }
+
+  scene.add(boardGroup);
+}
+
+
+function buildBoard_old() {
   boardGroup = new THREE.Group();
   board = Array.from({ length: 3 }, () => Array(3).fill(null));
 
